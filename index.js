@@ -174,5 +174,5 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.login(MTU1MTM3MDA4ODI3ODY2MzE3OA.G4piU6._Mi7Jrl-J3W8Yt_2gX4kNGWRJatEAXt_fCY_Ag).catch(console.error);
+client.login(process.env.DISCORD_TOKEN).catch(console.error);
 server.listen(process.env.PORT || 3000);
