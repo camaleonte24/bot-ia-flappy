@@ -175,9 +175,19 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-console.log("Tentativo di login con la cassaforte di Render...");
-client.login(process.env.DISCORD_TOKEN)
-    .then(() => console.log("L'IA DI DISCORD È UFFICIALMENTE ONLINE! 🚀"))
-    .catch((err) => console.log("ERRORE DI LOGIN:", err.message));
+// CONFIGURAZIONE FINALE CORRETTA PER I WEB SERVICES DI RENDER
+const PORT = process.env.PORT || 3000;
 
-server.listen(process.env.PORT || 3000);
+server.listen(PORT, () => {
+    console.log(`1. Server visivo per i telefoni attivo sulla porta ${PORT} 🚀`);
+    
+    // Avvia il Bot di Discord solo DOPO che il sito web è felicemente online
+    if (process.env.DISCORD_TOKEN) {
+        console.log("2. Tento il login nella cassaforte di Render...");
+        client.login(process.env.DISCORD_TOKEN)
+            .then(() => console.log("3. L'IA DI DISCORD È UFFICIALMENTE ONLINE! 🟢"))
+            .catch((err) => console.log("❌ Errore critico Discord:", err.message));
+    } else {
+        console.log("❌ ERRORE: La variabile DISCORD_TOKEN nella scheda Environment è vuota!");
+    }
+});
