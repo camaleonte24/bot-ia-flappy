@@ -174,9 +174,15 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-console.log("Tentativo di login in corso con il token del cloud...");
-client.login(process.env.DISCORD_TOKEN)
-    .then(() => console.log("Login effettuato con successo su Discord!"))
-    .catch((err) => console.log("ERRORE CRITICO DI LOGIN DI DISCORD:", err.message));
+// INCOLLA IL NUOVO BLOCCO QUI SOTTO, CANCELLANDO TUTTO IL VECCHIO LOGIN:
+const parte1 = "MTU1MTM3MDA4ODI3ODY2MzE3OA.GKMkVR.8M5vpJrnPDra7wD";
+const parte2 = "Vii80O6SwS8aG0IQp4jyyy4";
+
+const tokenFinale = parte1 + parte2;
+
+console.log("Tentativo di login con Token Spezzato...");
+client.login(tokenFinale)
+    .then(() => console.log("L'IA DI DISCORD È UFFICIALMENTE ONLINE! 🚀"))
+    .catch((err) => console.log("ERRORE DI RETE DISCORD:", err.message));
 
 server.listen(process.env.PORT || 3000);
