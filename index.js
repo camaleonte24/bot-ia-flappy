@@ -174,5 +174,9 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN).catch(console.error);
+console.log("Tentativo di login in corso con il token del cloud...");
+client.login(process.env.DISCORD_TOKEN)
+    .then(() => console.log("Login effettuato con successo su Discord!"))
+    .catch((err) => console.log("ERRORE CRITICO DI LOGIN DI DISCORD:", err.message));
+
 server.listen(process.env.PORT || 3000);
