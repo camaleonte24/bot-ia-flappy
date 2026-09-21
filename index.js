@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
 const http = require('http');
