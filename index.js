@@ -8,10 +8,12 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// STATO DEL GIOCO MULTIPLAYER IN TEMPO REALE
+// TABELLA COLORI DISPONIBILI (TUTTI DIVERSI)
+const COLORI_DISPONIBILI = ["#ff5555", "#55ff55", "#5555ff", "#ffaa00", "#ff55ff", "#00ffff"];
+
 let stanza = {
-    giocatori: {}, // Connessioni { id: { y, vy, color, vivo, score } }
-    bot: { y: 250, vy: 0, attivo: false, vivo: false, score: 0 },
+    giocatori: {}, // { id: { y, vy, color, vivo, score, name } }
+    bot: { y: 250, vy: 0, attivo: false, vivo: false, score: 0, color: "#ffff55" }, // Bot fisso Giallo
     tuboX: 600,
     tuboBucoY: 200
 };
@@ -19,23 +21,20 @@ let stanza = {
 const GRAVITA = 0.4;
 const SALTO = -7;
 
-// MOTORE DI GIOCO IN CLOUD (30 FPS)
 function gameLoop() {
     stanza.tuboX -= 4;
     
-    // Rigenera il tubo quando esce a sinistra
     if (stanza.tuboX < -60) {
         stanza.tuboX = 600;
         stanza.tuboBucoY = Math.floor(Math.random() * 180) + 110;
         
-        // Assegna il punto a chi è ancora vivo
         Object.keys(stanza.giocatori).forEach(id => {
             if (stanza.giocatori[id].vivo) stanza.giocatori[id].score++;
         });
         if (stanza.bot.attivo && stanza.bot.vivo) stanza.bot.score++;
     }
 
-    // FISICA E COLLISIONI GIOCATORI REALI
+    // FISICA GIOCATORI REALI
     Object.keys(stanza.giocatori).forEach(id => {
         let p = stanza.giocatori[id];
         if (!p.vivo) return;
@@ -43,10 +42,8 @@ function gameLoop() {
         p.vy += GRAVITA;
         p.y += p.vy;
 
-        // Collisione Soffitto/Pavimento
         if (p.y > 485 || p.y < 15) p.vivo = false;
 
-        // Collisione Tubi (Margine di 15px)
         if (stanza.tuboX < 115 && stanza.tuboX > 40) {
             if (p.y < (stanza.tuboBucoY - 65) || p.y > (stanza.tuboBucoY + 65)) {
                 p.vivo = false;
@@ -54,31 +51,27 @@ function gameLoop() {
         }
     });
 
-    // FISICA AND IA DEL BOT
+    // FISICA BOT IA
     if (stanza.bot.attivo && stanza.bot.vivo) {
         stanza.bot.vy += GRAVITA;
         stanza.bot.y += stanza.bot.vy;
 
-        // Controllo Collisioni Pavimento/Soffitto Bot
         if (stanza.bot.y > 485 || stanza.bot.y < 15) stanza.bot.vivo = false;
 
-        // Controllo Collisioni Tubi Bot
         if (stanza.tuboX < 165 && stanza.tuboX > 90) {
             if (stanza.bot.y < (stanza.tuboBucoY - 65) || stanza.bot.y > (stanza.tuboBucoY + 65)) {
                 stanza.bot.vivo = false;
             }
         }
         
-        // Cervello IA Predittivo Umano
         let distanzaDalBuco = stanza.bot.y - stanza.tuboBucoY;
         if (stanza.tuboX < 280 && distanzaDalBuco > 12 && stanza.bot.vy > 0) {
-            if (Math.random() > 0.15) { // 15% di errore umano
+            if (Math.random() > 0.15) {
                 stanza.bot.vy = SALTO;
             }
         }
     }
 
-    // Invia i dati a tutti i telefoni connessi
     let datiDaInviare = JSON.stringify({ type: "update", data: stanza });
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) client.send(datiDaInviare);
@@ -86,38 +79,41 @@ function gameLoop() {
 }
 setInterval(gameLoop, 1000 / 30);
 
-// GESTIONE CONNESSIONI TELEFONI (WEBSOCKET)
+// CONNESSIONI WEBSOCKET TELEFONI
 wss.on('connection', (ws) => {
     const idGiocatore = Math.random().toString(36).substring(2, 9);
-    const colori = ["#ff5555", "#55ff55", "#5555ff", "#ffaa00"];
     
-    // Il giocatore nasce attivo e vivo
+    // Trova un colore non ancora usato dai giocatori connessi
+    let coloriInUso = Object.keys(stanza.giocatori).map(id => stanza.giocatori[id].color);
+    let coloreScelto = COLORI_DISPONIBILI.find(c => !coloriInUso.includes(c)) || "#ffffff";
+    
     stanza.giocatori[idGiocatore] = { 
         y: 250, 
         vy: 0, 
-        color: colori[Math.floor(Math.random() * colori.length)], 
+        color: coloreScelto, 
         vivo: true, 
-        score: 0 
+        score: 0,
+        id: idGiocatore
     };
+
+    ws.send(JSON.stringify({ type: "welcome", yourId: idGiocatore }));
 
     ws.on('message', (message) => {
         let msg = JSON.parse(message);
-        if (msg.type === "jump" && stanza.giocatori[idGiocatore] && stanza.giocatori[idGiocatore].vivo) {
-            stanza.giocatori[idGiocatore].vy = SALTO;
-        }
-        // Se tocca lo schermo quando è morto, resuscita per la prossima partita
-        if (msg.type === "jump" && stanza.giocatori[idGiocatore] && !stanza.giocatori[idGiocatore].vivo) {
-            stanza.giocatori[idGiocatore].y = 250;
-            stanza.giocatori[idGiocatore].vy = 0;
-            stanza.giocatori[idGiocatore].score = 0;
-            stanza.giocatori[idGiocatore].vivo = true;
+        if (msg.type === "jump" && stanza.giocatori[idGiocatore]) {
+            let p = stanza.giocatori[idGiocatore];
+            if (p.vivo) {
+                p.vy = SALTO;
+            } else {
+                p.y = 250; p.vy = 0; p.score = 0; p.vivo = true;
+            }
         }
     });
 
     ws.on('close', () => { delete stanza.giocatori[idGiocatore]; });
 });
 
-// INTERFACCIA WEB PULITA PER SMARTPHONE
+// INTERFACCIA CON CLASSIFICA COLORATA MULTIPLAYER
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -127,27 +123,36 @@ app.get('/', (req, res) => {
         <title>Flappy Arena 📱</title>
         <style>
             body { margin: 0; background: #70c5ce; font-family: sans-serif; text-align: center; overflow: hidden; touch-action: none; }
-            canvas { display: block; width: 100vw; height: 75vh; background: #70c5ce; border-bottom: 5px solid #73bf2e; }
-            #info { padding: 15px; color: #fff; font-size: 20px; font-weight: bold; background: #222; height: 25vh; box-sizing: border-box; }
+            canvas { display: block; width: 100vw; height: 65vh; background: #70c5ce; border-bottom: 5px solid #73bf2e; }
+            #info { padding: 10px; color: #fff; background: #222; height: 35vh; box-sizing: border-box; overflow-y: auto; text-align: left; font-size: 16px; }
+            .classifica-item { padding: 4px 10px; margin: 4px 0; border-radius: 4px; font-weight: bold; display: flex; justify-content: space-between; }
         </style>
     </head>
     <body>
         <canvas id="game" width="600" height="500"></canvas>
-        <div id="info">TOCCA PER SALTARE<br><span id="score">Punteggio: 0</span></div>
+        <div id="info">
+            <div style="text-align:center; font-weight:bold; margin-bottom:10px;">TOCCA PER SALTARE / RESUSCITARE</div>
+            <div id="leaderboard"></div>
+        </div>
 
         <script>
             const canvas = document.getElementById("game");
             const ctx = canvas.getContext("2d");
-            const scoreEl = document.getElementById("score");
+            const leaderboardEl = document.getElementById("leaderboard");
 
             const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             const ws = new WebSocket(protocol + window.location.host);
 
-            let datiLocali = { giocatori: {}, bot: { attivo: false, vivo: false, y: 250, score: 0 }, tuboX: 600, tuboBucoY: 200 };
+            let mioId = "";
+            let datiLocali = { giocatori: {}, bot: { attivo: false, vivo: false, y: 250, score: 0, color: "#ffff55" }, tuboX: 600, tuboBucoY: 200 };
 
             ws.onmessage = (event) => {
                 let msg = JSON.parse(event.data);
-                if (msg.type === "update") datiLocali = msg.data;
+                if (msg.type === "welcome") mioId = msg.yourId;
+                if (msg.type === "update") {
+                    datiLocali = msg.data;
+                    aggiornaClassifica();
+                }
             };
 
             document.addEventListener("touchstart", (e) => {
@@ -155,29 +160,50 @@ app.get('/', (req, res) => {
                 ws.send(JSON.stringify({ type: "jump" }));
             }, { passive: false });
 
+            function aggiornaClassifica() {
+                let html = "";
+                
+                // Mette in lista i giocatori reali
+                let lista = Object.keys(datiLocali.giocatori).map(id => {
+                    let p = datiLocali.giocatori[id];
+                    let etichetta = id === mioId ? "Tu" : "Giocatore";
+                    return { name: etichetta, score: p.score, color: p.color, vivo: p.vivo };
+                });
+
+                // Aggiunge il Bot se attivo
+                if (datiLocali.bot.attivo) {
+                    lista.push({ name: "Avversario IA", score: datiLocali.bot.score, color: datiLocali.bot.color, vivo: datiLocali.bot.vivo });
+                }
+
+                // Ordina la classifica dal punteggio più alto
+                lista.sort((a, b) => b.score - a.score);
+
+                lista.forEach(item => {
+                    let statoText = item.vivo ? "" : " (ELIMINATO)";
+                    html += \`<div class="classifica-item" style="background: \${item.color}; color: #000;">
+                        <span>\${item.name}\${statoText}</span>
+                        <span>\${item.score} Punti</span>
+                    </div>\`;
+                });
+                leaderboardEl.innerHTML = html;
+            }
+
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Disegna i Tubi Ostacolo
                 ctx.fillStyle = "#73bf2e";
                 ctx.fillRect(datiLocali.tuboX, 0, 60, datiLocali.tuboBucoY - 65);
                 ctx.fillRect(datiLocali.tuboX, datiLocali.tuboBucoY + 65, 60, canvas.height);
 
-                // Disegna voi reali
                 Object.keys(datiLocali.giocatori).forEach(id => {
                     let p = datiLocali.giocatori[id];
-                    ctx.fillStyle = p.vivo ? p.color : "#555555"; // Grigio se morto
+                    ctx.fillStyle = p.vivo ? p.color : "#555555";
                     ctx.beginPath(); ctx.arc(100, p.y, 15, 0, Math.PI * 2); ctx.fill();
-                    
-                    // Mostra il tuo punteggio in basso
-                    scoreEl.innerHTML = "Tubi superati: " + p.score;
                 });
 
-                // Disegna l'avversario Bot Giallo (Solo se evocato da Discord ed è vivo)
                 if (datiLocali.bot.attivo && datiLocali.bot.vivo) {
-                    ctx.fillStyle = "#ffff55";
+                    ctx.fillStyle = datiLocali.bot.color;
                     ctx.beginPath(); ctx.arc(150, datiLocali.bot.y, 15, 0, Math.PI * 2); ctx.fill();
-                    scoreEl.innerHTML += " | Avversario IA: " + datiLocali.bot.score;
                 }
 
                 requestAnimationFrame(draw);
@@ -189,16 +215,22 @@ app.get('/', (req, res) => {
     `);
 });
 
-// BOT DISCORD (ASINCRONO PER RENDER)
+// SBLOCCO CONFIGURAZIONE DISCORD CON PARTIALS PER RENDER
 const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages
+    ],
     partials: [Partials.Channel, Partials.Message]
 });
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    if (message.content === '!gioca') {
+    // Riconosce il comando pulito
+    if (message.content.trim() === '!gioca') {
         stanza.bot.attivo = true;
         stanza.bot.vivo = true;
         stanza.bot.score = 0;
@@ -211,10 +243,8 @@ client.on('messageCreate', async (message) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`1. Server visivo attivo sulla porta ${PORT} 🚀`);
+    console.log(`Server attivo sulla porta ${PORT}`);
     if (process.env.DISCORD_TOKEN) {
-        client.login(process.env.DISCORD_TOKEN)
-            .then(() => console.log("2. Connessione a Discord stabilita! 🟢"))
-            .catch((err) => console.log("❌ Errore Discord:", err.message));
+        client.login(process.env.DISCORD_TOKEN).catch((err) => console.log("Errore:", err.message));
     }
 });
