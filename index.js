@@ -227,10 +227,14 @@ const client = new Client({
 });
 
 client.on('messageCreate', async (message) => {
+    // Ignora gli altri bot
     if (message.author.bot) return;
 
-    // Riconosce il comando pulito
-    if (message.content.trim() === '!gioca') {
+    // Converte il testo in minuscolo per evitare errori di maiuscole
+    const testo = message.content.toLowerCase().trim();
+
+    // IL BOT RISPONDE SE SEI NEL CANALE CORRETTO E SE SCRIVI "gioca" O SE LO TAGGHI
+    if (testo === 'gioca' || testo === '!gioca' || message.mentions.users.has(client.user.id)) {
         stanza.bot.attivo = true;
         stanza.bot.vivo = true;
         stanza.bot.score = 0;
@@ -240,6 +244,7 @@ client.on('messageCreate', async (message) => {
         message.reply(`Sto entrando...`);
     }
 });
+
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
