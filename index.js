@@ -164,9 +164,15 @@ app.get('/', (req, res) => {
     `);
 });
 
-// MESSAGGI DISCORD ORA COMPLETAMENTE INDIPENDENTI
+// CONFIGURAZIONE APERTA INTENTS PER PACCHETTI DI RETE CLOUD
 const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMembers
+    ],
     partials: [Partials.Channel, Partials.Message]
 });
 
