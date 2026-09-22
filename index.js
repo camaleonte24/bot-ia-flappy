@@ -11,7 +11,7 @@ const wss = new WebSocket.Server({ server });
 const COLORI_DISPONIBILI = ["#ff5555", "#55ff55", "#5555ff", "#ffaa00", "#ff55ff", "#00ffff"];
 
 let stanza = {
-    giocatori: {}, // { id: { y, vy, color, vivo, score } }
+    giocatori: {}, 
     bot: { y: 250, vy: 0, attivo: false, vivo: false, score: 0, color: "#ffff55" },
     tuboX: 600,
     tuboBucoY: 200
@@ -83,7 +83,7 @@ wss.on('connection', (ws) => {
     ws.on('close', () => { delete stanza.giocatori[idGiocatore]; });
 });
 
-// SITO WEB SMARTPHONE (CLASSIFICA REALISTICA SENZA SCRITTE STRINGENTI)
+// INTERFACCIA WEB TELEFONI CON CLASSIFICA DINAMICA PER COLORE
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -128,14 +128,14 @@ app.get('/', (req, res) => {
                     let etichetta = id === mioId ? "Tu" : "Giocatore Online";
                     return { name: etichetta, score: p.score, color: p.color, vivo: p.vivo };
                 });
-                if (datiLocali.bot.attivo && datiLocali.bot.vivo) {
-                    lista.push({ name: "Player_Giallo", score: datiLocali.bot.score, color: datiLocali.bot.color, vivo: datiLocali.bot.vivo });
+                if (datiLocali.bot.attivo) {
+                    let statoText = datiLocali.bot.vivo ? "" : " (ELIMINATO)";
+                    lista.push({ name: "Player_Giallo" + statoText, score: datiLocali.bot.score, color: datiLocali.bot.color, vivo: datiLocali.bot.vivo });
                 }
                 lista.sort((a, b) => b.score - a.score);
                 lista.forEach(item => {
-                    let statoText = item.vivo ? "" : " (ELIMINATO)";
                     html += \`<div class="classifica-item" style="background: \${item.color}; color: #000;">
-                        <span>\${item.name}\${statoText}</span>
+                        <span>\${item.name}</span>
                         <span>\${item.score} Punti</span>
                     </div>\`;
                 });
@@ -165,7 +165,12 @@ app.get('/', (req, res) => {
     `);
 });
 
-// BOT DISCORD (ACCETTA GIOCA SENZA PREFISSI RESTRITTIVI)
+// RISPOSTA AI CONTROLLI DI STATO DI RENDER (FONDAMENTALE)
+app.get('/_render_health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// MESSAGGI DISCORD CON PAROLA PULITA O PREFISSO
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
     partials: [Partials.Channel, Partials.Message]
@@ -185,13 +190,20 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// AVVIO UNIFICATO SU PORTA 10000 PER EVITARE IL KILL DI RENDER
+// AVVIO CORRETTO: PRIMA IL LOG DI DISCORD, POI LA PORTA INTERNET
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-    console.log(`Server visivo attivo sulla porta ${PORT}`);
-    if (process.env.DISCORD_TOKEN) {
-        client.login(process.env.DISCORD_TOKEN)
-            .then(() => console.log("Bot accoppiato a Discord con successo!"))
-            .catch((err) => console.log("Errore login Discord:", err.message));
-    }
-});
+if (process.env.DISCORD_TOKEN) {
+    console.log("Inizializzazione bot...");
+    client.login(process.env.DISCORD_TOKEN)
+        .then(() => {
+            console.log("Discord agganciato con successo!");
+            server.listen(PORT, () => console.log(`Server web attivo sulla porta ${PORT}`));
+        })
+        .catch((err) => {
+            console.log("Errore login Discord:", err.message);
+            // Avvia comunque il server web in caso di micro-ritardi di rete
+            server.listen(PORT, () => console.log(`Server avviato in modalità provvisoria sulla porta ${PORT}`));
+        });
+} else {
+    server.listen(PORT, () => console.log(`Server attivo senza bot sulla porta ${PORT}`));
+}
