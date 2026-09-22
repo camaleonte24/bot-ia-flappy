@@ -83,7 +83,6 @@ wss.on('connection', (ws) => {
     ws.on('close', () => { delete stanza.giocatori[idGiocatore]; });
 });
 
-// INTERFACCIA WEB TELEFONI CON CLASSIFICA DINAMICA PER COLORE
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -165,12 +164,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// RISPOSTA AI CONTROLLI DI STATO DI RENDER (FONDAMENTALE)
-app.get('/_render_health', (req, res) => {
-    res.status(200).send('OK');
-});
-
-// MESSAGGI DISCORD CON PAROLA PULITA O PREFISSO
+// MESSAGGI DISCORD ORA COMPLETAMENTE INDIPENDENTI
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
     partials: [Partials.Channel, Partials.Message]
@@ -190,20 +184,23 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// AVVIO CORRETTO: PRIMA IL LOG DI DISCORD, POI LA PORTA INTERNET
-// AVVIO IMMEDIATO DELLA PORTA PER EVITARE I 7 MINUTI DI CARICAMENTO
-const PORT = process.env.PORT || 10000;
+// LOG DI SICUREZZA INIZIALE
+client.on('ready', () => {
+    console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢");
+});
 
+// DISCOPPIA IL WEB SERVER DA DISCORD: APRIAMO SUBITO LA PORTA DI RENDER
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
     
-    // Ora che il server è Live per Render, colleghiamo Discord in background senza fretta
+    // Eseguiamo il login di Discord in un thread parallelo slegato dal server web
     if (process.env.DISCORD_TOKEN) {
         console.log("Inizializzazione bot...");
-        client.login(process.env.DISCORD_TOKEN)
-            .then(() => console.log("Discord agganciato con successo! 🟢"))
-            .catch((err) => console.log("❌ Errore login Discord:", err.message));
-    } else {
-        console.log("❌ ERRORE: Manca la variabile DISCORD_TOKEN su Render!");
+        setTimeout(() => {
+            client.login(process.env.DISCORD_TOKEN).catch((err) => {
+                console.log("❌ Errore login Discord:", err.message);
+            });
+        }, 500); // Ritardo di mezzo secondo per far respirare la porta 10000
     }
 });
