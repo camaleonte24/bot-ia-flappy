@@ -191,19 +191,19 @@ client.on('messageCreate', async (message) => {
 });
 
 // AVVIO CORRETTO: PRIMA IL LOG DI DISCORD, POI LA PORTA INTERNET
+// AVVIO IMMEDIATO DELLA PORTA PER EVITARE I 7 MINUTI DI CARICAMENTO
 const PORT = process.env.PORT || 10000;
-if (process.env.DISCORD_TOKEN) {
-    console.log("Inizializzazione bot...");
-    client.login(process.env.DISCORD_TOKEN)
-        .then(() => {
-            console.log("Discord agganciato con successo!");
-            server.listen(PORT, () => console.log(`Server web attivo sulla porta ${PORT}`));
-        })
-        .catch((err) => {
-            console.log("Errore login Discord:", err.message);
-            // Avvia comunque il server web in caso di micro-ritardi di rete
-            server.listen(PORT, () => console.log(`Server avviato in modalità provvisoria sulla porta ${PORT}`));
-        });
-} else {
-    server.listen(PORT, () => console.log(`Server attivo senza bot sulla porta ${PORT}`));
-}
+
+server.listen(PORT, () => {
+    console.log(`Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
+    
+    // Ora che il server è Live per Render, colleghiamo Discord in background senza fretta
+    if (process.env.DISCORD_TOKEN) {
+        console.log("Inizializzazione bot...");
+        client.login(process.env.DISCORD_TOKEN)
+            .then(() => console.log("Discord agganciato con successo! 🟢"))
+            .catch((err) => console.log("❌ Errore login Discord:", err.message));
+    } else {
+        console.log("❌ ERRORE: Manca la variabile DISCORD_TOKEN su Render!");
+    }
+});
