@@ -165,17 +165,20 @@ app.get('/', (req, res) => {
     `);
 });
 
-// INTERCETTAZIONE DEI MESSAGGI STANDARD
+// CONFIGURAZIONE DISCORD COMPATIBILE VERSIONE 13 (SBLOCCO RENDER)
 const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
-    partials: [Partials.Channel, Partials.Message]
+    intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAGES"] 
+});
+
+client.on('ready', () => {
+    console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢");
 });
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     const t = message.content.toLowerCase().trim();
     
-    if (t === 'gioca' || t === '!gioca' || message.mentions.users.has(client.user.id)) {
+    if (t === 'gioca' || t === '!gioca') {
         stanza.bot.attivo = true;
         stanza.bot.vivo = true;
         stanza.bot.score = 0;
@@ -186,16 +189,12 @@ client.on('messageCreate', async (message) => {
 });
 
 const PORT = process.env.PORT || 10000;
-
 server.listen(PORT, () => {
-    console.log(`Server attivo sulla porta ${PORT} 🚀`);
-    
+    console.log(`Server visivo sbloccato sulla porta ${PORT} 🚀`);
     if (process.env.DISCORD_TOKEN) {
         console.log("Inizializzazione bot...");
-        client.login(process.env.DISCORD_TOKEN)
-            .then(() => console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢"))
-            .catch((err) => console.log("❌ Errore login:", err.message));
-    } else {
-        console.log("❌ Manca la variabile DISCORD_TOKEN!");
+        client.login(process.env.DISCORD_TOKEN).catch((err) => {
+            console.log("❌ Errore login:", err.message);
+        });
     }
 });
