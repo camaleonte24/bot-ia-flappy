@@ -1,8 +1,8 @@
-require('dotenv').config();
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -83,6 +83,7 @@ wss.on('connection', (ws) => {
     ws.on('close', () => { delete stanza.giocatori[idGiocatore]; });
 });
 
+// SITO SMARTPHONE CON LA TUA CLASSIFICA PULITA
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -164,9 +165,9 @@ app.get('/', (req, res) => {
     `);
 });
 
-// MESSAGGI DISCORD ORA COMPLETAMENTE INDIPENDENTI
+// INTERCETTAZIONE DEI MESSAGGI STANDARD
 const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
     partials: [Partials.Channel, Partials.Message]
 });
 
@@ -184,23 +185,17 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// LOG DI SICUREZZA INIZIALE
-client.on('ready', () => {
-    console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢");
-});
-
-// DISCOPPIA IL WEB SERVER DA DISCORD: APRIAMO SUBITO LA PORTA DI RENDER
+// AVVIO SEPARATO CON LOG IN BACKGROUND
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
     
-    // Eseguiamo il login di Discord in un thread parallelo slegato dal server web
     if (process.env.DISCORD_TOKEN) {
         console.log("Inizializzazione bot...");
         setTimeout(() => {
-            client.login(process.env.DISCORD_TOKEN).catch((err) => {
-                console.log("❌ Errore login Discord:", err.message);
-            });
-        }, 500); // Ritardo di mezzo secondo per far respirare la porta 10000
+            client.login(process.env.DISCORD_TOKEN)
+                .then(() => console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢"))
+                .catch((err) => console.log("❌ Errore login:", err.message));
+        }, 500);
     }
 });
