@@ -1,19 +1,18 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// TABELLA COLORI DISPONIBILI (TUTTI DIVERSI)
 const COLORI_DISPONIBILI = ["#ff5555", "#55ff55", "#5555ff", "#ffaa00", "#ff55ff", "#00ffff"];
 
 let stanza = {
-    giocatori: {}, // { id: { y, vy, color, vivo, score, name } }
-    bot: { y: 250, vy: 0, attivo: false, vivo: false, score: 0, color: "#ffff55" }, // Bot fisso Giallo
+    giocatori: {}, // { id: { y, vy, color, vivo, score } }
+    bot: { y: 250, vy: 0, attivo: false, vivo: false, score: 0, color: "#ffff55" },
     tuboX: 600,
     tuboBucoY: 200
 };
@@ -34,41 +33,27 @@ function gameLoop() {
         if (stanza.bot.attivo && stanza.bot.vivo) stanza.bot.score++;
     }
 
-    // FISICA GIOCATORI REALI
+    // FISICA GIOCATORI
     Object.keys(stanza.giocatori).forEach(id => {
         let p = stanza.giocatori[id];
         if (!p.vivo) return;
-
-        p.vy += GRAVITA;
-        p.y += p.vy;
-
+        p.vy += GRAVITA; p.y += p.vy;
         if (p.y > 485 || p.y < 15) p.vivo = false;
-
         if (stanza.tuboX < 115 && stanza.tuboX > 40) {
-            if (p.y < (stanza.tuboBucoY - 65) || p.y > (stanza.tuboBucoY + 65)) {
-                p.vivo = false;
-            }
+            if (p.y < (stanza.tuboBucoY - 65) || p.y > (stanza.tuboBucoY + 65)) p.vivo = false;
         }
     });
 
     // FISICA BOT IA
     if (stanza.bot.attivo && stanza.bot.vivo) {
-        stanza.bot.vy += GRAVITA;
-        stanza.bot.y += stanza.bot.vy;
-
+        stanza.bot.vy += GRAVITA; stanza.bot.y += stanza.bot.vy;
         if (stanza.bot.y > 485 || stanza.bot.y < 15) stanza.bot.vivo = false;
-
         if (stanza.tuboX < 165 && stanza.tuboX > 90) {
-            if (stanza.bot.y < (stanza.tuboBucoY - 65) || stanza.bot.y > (stanza.tuboBucoY + 65)) {
-                stanza.bot.vivo = false;
-            }
+            if (stanza.bot.y < (stanza.tuboBucoY - 65) || stanza.bot.y > (stanza.tuboBucoY + 65)) stanza.bot.vivo = false;
         }
-        
         let distanzaDalBuco = stanza.bot.y - stanza.tuboBucoY;
         if (stanza.tuboX < 280 && distanzaDalBuco > 12 && stanza.bot.vy > 0) {
-            if (Math.random() > 0.15) {
-                stanza.bot.vy = SALTO;
-            }
+            if (Math.random() > 0.15) stanza.bot.vy = SALTO;
         }
     }
 
@@ -79,41 +64,26 @@ function gameLoop() {
 }
 setInterval(gameLoop, 1000 / 30);
 
-// CONNESSIONI WEBSOCKET TELEFONI
 wss.on('connection', (ws) => {
     const idGiocatore = Math.random().toString(36).substring(2, 9);
-    
-    // Trova un colore non ancora usato dai giocatori connessi
     let coloriInUso = Object.keys(stanza.giocatori).map(id => stanza.giocatori[id].color);
     let coloreScelto = COLORI_DISPONIBILI.find(c => !coloriInUso.includes(c)) || "#ffffff";
     
-    stanza.giocatori[idGiocatore] = { 
-        y: 250, 
-        vy: 0, 
-        color: coloreScelto, 
-        vivo: true, 
-        score: 0,
-        id: idGiocatore
-    };
-
+    stanza.giocatori[idGiocatore] = { y: 250, vy: 0, color: coloreScelto, vivo: true, score: 0 };
     ws.send(JSON.stringify({ type: "welcome", yourId: idGiocatore }));
 
     ws.on('message', (message) => {
         let msg = JSON.parse(message);
         if (msg.type === "jump" && stanza.giocatori[idGiocatore]) {
             let p = stanza.giocatori[idGiocatore];
-            if (p.vivo) {
-                p.vy = SALTO;
-            } else {
-                p.y = 250; p.vy = 0; p.score = 0; p.vivo = true;
-            }
+            if (p.vivo) p.vy = SALTO;
+            else { p.y = 250; p.vy = 0; p.score = 0; p.vivo = true; }
         }
     });
-
     ws.on('close', () => { delete stanza.giocatori[idGiocatore]; });
 });
 
-// INTERFACCIA CON CLASSIFICA COLORATA MULTIPLAYER
+// SITO WEB SMARTPHONE (CLASSIFICA REALISTICA SENZA SCRITTE STRINGENTI)
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -125,7 +95,7 @@ app.get('/', (req, res) => {
             body { margin: 0; background: #70c5ce; font-family: sans-serif; text-align: center; overflow: hidden; touch-action: none; }
             canvas { display: block; width: 100vw; height: 65vh; background: #70c5ce; border-bottom: 5px solid #73bf2e; }
             #info { padding: 10px; color: #fff; background: #222; height: 35vh; box-sizing: border-box; overflow-y: auto; text-align: left; font-size: 16px; }
-            .classifica-item { padding: 4px 10px; margin: 4px 0; border-radius: 4px; font-weight: bold; display: flex; justify-content: space-between; }
+            .classifica-item { padding: 6px 10px; margin: 4px 0; border-radius: 4px; font-weight: bold; display: flex; justify-content: space-between; }
         </style>
     </head>
     <body>
@@ -134,50 +104,34 @@ app.get('/', (req, res) => {
             <div style="text-align:center; font-weight:bold; margin-bottom:10px;">TOCCA PER SALTARE / RESUSCITARE</div>
             <div id="leaderboard"></div>
         </div>
-
         <script>
             const canvas = document.getElementById("game");
             const ctx = canvas.getContext("2d");
             const leaderboardEl = document.getElementById("leaderboard");
-
             const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             const ws = new WebSocket(protocol + window.location.host);
-
             let mioId = "";
             let datiLocali = { giocatori: {}, bot: { attivo: false, vivo: false, y: 250, score: 0, color: "#ffff55" }, tuboX: 600, tuboBucoY: 200 };
 
             ws.onmessage = (event) => {
                 let msg = JSON.parse(event.data);
                 if (msg.type === "welcome") mioId = msg.yourId;
-                if (msg.type === "update") {
-                    datiLocali = msg.data;
-                    aggiornaClassifica();
-                }
+                if (msg.type === "update") { datiLocali = msg.data; aggiornaClassifica(); }
             };
 
-            document.addEventListener("touchstart", (e) => {
-                e.preventDefault();
-                ws.send(JSON.stringify({ type: "jump" }));
-            }, { passive: false });
+            document.addEventListener("touchstart", (e) => { e.preventDefault(); ws.send(JSON.stringify({ type: "jump" })); }, { passive: false });
 
             function aggiornaClassifica() {
                 let html = "";
-                
-                // Mette in lista i giocatori reali
                 let lista = Object.keys(datiLocali.giocatori).map(id => {
                     let p = datiLocali.giocatori[id];
-                    let etichetta = id === mioId ? "Tu" : "Giocatore";
+                    let etichetta = id === mioId ? "Tu" : "Giocatore Online";
                     return { name: etichetta, score: p.score, color: p.color, vivo: p.vivo };
                 });
-
-                // Aggiunge il Bot se attivo
-                if (datiLocali.bot.attivo) {
-                    lista.push({ name: "Avversario IA", score: datiLocali.bot.score, color: datiLocali.bot.color, vivo: datiLocali.bot.vivo });
+                if (datiLocali.bot.attivo && datiLocali.bot.vivo) {
+                    lista.push({ name: "Player_Giallo", score: datiLocali.bot.score, color: datiLocali.bot.color, vivo: datiLocali.bot.vivo });
                 }
-
-                // Ordina la classifica dal punteggio più alto
                 lista.sort((a, b) => b.score - a.score);
-
                 lista.forEach(item => {
                     let statoText = item.vivo ? "" : " (ELIMINATO)";
                     html += \`<div class="classifica-item" style="background: \${item.color}; color: #000;">
@@ -190,22 +144,18 @@ app.get('/', (req, res) => {
 
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
                 ctx.fillStyle = "#73bf2e";
                 ctx.fillRect(datiLocali.tuboX, 0, 60, datiLocali.tuboBucoY - 65);
                 ctx.fillRect(datiLocali.tuboX, datiLocali.tuboBucoY + 65, 60, canvas.height);
-
                 Object.keys(datiLocali.giocatori).forEach(id => {
                     let p = datiLocali.giocatori[id];
                     ctx.fillStyle = p.vivo ? p.color : "#555555";
                     ctx.beginPath(); ctx.arc(100, p.y, 15, 0, Math.PI * 2); ctx.fill();
                 });
-
                 if (datiLocali.bot.attivo && datiLocali.bot.vivo) {
                     ctx.fillStyle = datiLocali.bot.color;
                     ctx.beginPath(); ctx.arc(150, datiLocali.bot.y, 15, 0, Math.PI * 2); ctx.fill();
                 }
-
                 requestAnimationFrame(draw);
             }
             draw();
@@ -215,55 +165,33 @@ app.get('/', (req, res) => {
     `);
 });
 
-// SBLOCCO CONFIGURAZIONE DISCORD CON PARTIALS PER RENDER
+// BOT DISCORD (ACCETTA GIOCA SENZA PREFISSI RESTRITTIVI)
 const client = new Client({ 
-    intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.DirectMessages
-    ],
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
     partials: [Partials.Channel, Partials.Message]
 });
 
 client.on('messageCreate', async (message) => {
-    // Ignora gli altri bot
     if (message.author.bot) return;
-
-    // Converte il testo in minuscolo per evitare errori di maiuscole
-    const testo = message.content.toLowerCase().trim();
-
-    // IL BOT RISPONDE SE SEI NEL CANALE CORRETTO E SE SCRIVI "gioca" O SE LO TAGGHI
-    if (testo === 'gioca' || testo === '!gioca' || message.mentions.users.has(client.user.id)) {
+    const t = message.content.toLowerCase().trim();
+    
+    if (t === 'gioca' || t === '!gioca' || message.mentions.users.has(client.user.id)) {
         stanza.bot.attivo = true;
         stanza.bot.vivo = true;
         stanza.bot.score = 0;
         stanza.bot.y = 250;
         stanza.bot.vy = 0;
-        
         message.reply(`Sto entrando...`);
     }
 });
 
-
-// GESTIONE AVVIO SEPARATA PER EVITARE IL BLOCCO DI RENDER
-const PORT = process.env.PORT || 3000;
-
-// 1. Diciamo SUBITO a Render che il sito per i telefoni è pronto e funzionante
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`1. Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
-    
-    // 2. Facciamo partire il server WebSocket per i telefoni in parallelo
-    server.listen(Number(PORT) + 1, () => {
-        console.log("2. Canale multiplayer sincronizzato.");
-    });
-
-    // 3. Solo ora, con calma e senza fretta, colleghiamo Discord in background
+// AVVIO UNIFICATO SU PORTA 10000 PER EVITARE IL KILL DI RENDER
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Server visivo attivo sulla porta ${PORT}`);
     if (process.env.DISCORD_TOKEN) {
-        console.log("3. Collegamento a Discord in corso...");
         client.login(process.env.DISCORD_TOKEN)
-            .then(() => console.log("4. L'IA DI DISCORD È ONLINE E STABILE! 🟢"))
-            .catch((err) => console.log("❌ Errore Discord:", err.message));
+            .then(() => console.log("Bot accoppiato a Discord con successo!"))
+            .catch((err) => console.log("Errore login Discord:", err.message));
     }
 });
-
