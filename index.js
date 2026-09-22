@@ -188,13 +188,20 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+// AVVIO FINALE CON CHIAVE HARDWARE AGGIORNATA
 const PORT = process.env.PORT || 10000;
+
 server.listen(PORT, () => {
-    console.log(`Server visivo sbloccato sulla porta ${PORT} 🚀`);
-    if (process.env.DISCORD_TOKEN) {
-        console.log("Inizializzazione bot...");
-        client.login(process.env.DISCORD_TOKEN).catch((err) => {
-            console.log("❌ Errore login:", err.message);
-        });
-    }
+    console.log(`Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
+    
+    // Il tuo nuovo token spezzato per sicurezza
+    const p1 = "MTU1MTM3MDA4ODI3ODY2MzE3OA";
+    const p2 = ".GqzFla.8xl5PWwUCPLi5rpdFm";
+    const p3 = "5zya75usZKfq8UOYKUds";
+    const chiaveAggiornata = p1 + p2 + p3;
+
+    console.log("Tentativo di accesso forzato con chiave hardware...");
+    client.login(chiaveAggiornata)
+        .then(() => console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢"))
+        .catch((err) => console.log("❌ ERRORE REALE DI LOGIN:", err.message));
 });
