@@ -185,21 +185,17 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// CONFIGURAZIONE FINALE AD AVVIO IMMEDIATO CON TOKEN SALDATO
 const PORT = process.env.PORT || 10000;
 
 server.listen(PORT, () => {
-    console.log(`Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
+    console.log(`Server attivo sulla porta ${PORT} 🚀`);
     
-    // Uniamo il tuo token in modo che Render lo legga ma GitHub non lo veda come codice intero
-    const p1 = "MTU1MTM3MDA4ODI3ODY2MzE3OA";
-    const p2 = ".GKMkVR.8M5vpJrnPDra";
-    const p3 = "7wDVii80O6SwS8aG0IQp4jyyy4";
-    const tokenSaldato = p1 + p2 + p3;
-
-    console.log("Inizializzazione bot con chiave hardware...");
-    client.login(tokenSaldato)
-        .then(() => console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢"))
-        .catch((err) => console.log("❌ Errore login Discord:", err.message));
+    if (process.env.DISCORD_TOKEN) {
+        console.log("Inizializzazione bot...");
+        client.login(process.env.DISCORD_TOKEN)
+            .then(() => console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢"))
+            .catch((err) => console.log("❌ Errore login:", err.message));
+    } else {
+        console.log("❌ Manca la variabile DISCORD_TOKEN!");
+    }
 });
-
