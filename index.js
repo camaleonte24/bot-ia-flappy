@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, Intents } = require('discord.js');
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
