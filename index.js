@@ -246,10 +246,24 @@ client.on('messageCreate', async (message) => {
 });
 
 
+// GESTIONE AVVIO SEPARATA PER EVITARE IL BLOCCO DI RENDER
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server attivo sulla porta ${PORT}`);
+
+// 1. Diciamo SUBITO a Render che il sito per i telefoni è pronto e funzionante
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`1. Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
+    
+    // 2. Facciamo partire il server WebSocket per i telefoni in parallelo
+    server.listen(Number(PORT) + 1, () => {
+        console.log("2. Canale multiplayer sincronizzato.");
+    });
+
+    // 3. Solo ora, con calma e senza fretta, colleghiamo Discord in background
     if (process.env.DISCORD_TOKEN) {
-        client.login(process.env.DISCORD_TOKEN).catch((err) => console.log("Errore:", err.message));
+        console.log("3. Collegamento a Discord in corso...");
+        client.login(process.env.DISCORD_TOKEN)
+            .then(() => console.log("4. L'IA DI DISCORD È ONLINE E STABILE! 🟢"))
+            .catch((err) => console.log("❌ Errore Discord:", err.message));
     }
 });
+
