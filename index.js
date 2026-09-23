@@ -77,18 +77,31 @@ function gameLoop() {
         if (stanza.tuboX < 350) {
             let obiettivoY = stanza.tuboBucoY; // Punta al centro del buco
             
-            // Salta solo se scende sotto l'obiettivo e sta effettivamente cadendo
+            // Salta solo se scende sotto l'obiettivo e sta cadendo...
             if (stanza.bot.y > (obiettivoY + 10) && stanza.bot.vy > 0) {
-                stanza.bot.vy = SALTO;
+                // SE IL PUNTEGGIO E' BASSO (Primi 3 tubi), IL BOT E' PERFETTO AL 100%
+                if (stanza.bot.score < 3) {
+                    stanza.bot.vy = SALTO;
+                } else {
+                    // Dal 4° tubo in poi, si attiva il 15% di errore umano per farlo sbagliare!
+                    if (Math.random() > 0.15) {
+                        stanza.bot.vy = SALTO;
+                    }
+                }
             }
         } else {
             // Se il tubo è lontano, fluttua dolcemente attorno al centro dello schermo (y: 250) per stabilizzarsi
             if (stanza.bot.y > 270 && stanza.bot.vy > 0) {
-                stanza.bot.vy = SALTO;
+                if (stanza.bot.score < 3) {
+                    stanza.bot.vy = SALTO;
+                } else {
+                    if (Math.random() > 0.15) {
+                        stanza.bot.vy = SALTO;
+                    }
+                }
             }
         }
     }
-
 
     let datiDaInviare = JSON.stringify({ type: "update", data: stanza });
     wss.clients.forEach(client => {
@@ -202,7 +215,6 @@ app.get('/', (req, res) => {
     </html>
     `);
 });
-
 // MESSAGGI DISCORD CON DIGITAZIONE A 5 SECONDI
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
