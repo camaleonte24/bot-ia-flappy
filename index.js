@@ -30,18 +30,17 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// LOGIN IMMEDIATO HARDWARE E AVVIO PORTA UNIFICATA
+// AVVIO CORRETTO CON LETTURA DELLA CASSAFORTE DI RENDER
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Server web di controllo attivo sulla porta ${PORT}`);
     
-    const p1 = "MTU1MTM3MDA4ODI3ODY2MzE3OA";
-    const p2 = ".GM3ONh._W2sN7WKpdGmMkzze87";
-    const p3 = "XMHBO8uCCJ9oq1i3zmM";
-    const chiaveHardware = p1 + p2 + p3;
-
-    console.log("Avvio del bot in corso...");
-    client.login(chiaveHardware).catch((err) => {
-        console.log("❌ Errore login:", err.message);
-    });
+    if (process.env.DISCORD_TOKEN) {
+        console.log("Avvio del bot in corso con la cassaforte di Render...");
+        client.login(process.env.DISCORD_TOKEN).catch((err) => {
+            console.log("❌ Errore login:", err.message);
+        });
+    } else {
+        console.log("❌ ERRORE: La variabile DISCORD_TOKEN nella scheda Environment è vuota!");
+    }
 });
