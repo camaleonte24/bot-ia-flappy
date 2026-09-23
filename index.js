@@ -187,17 +187,20 @@ client.on('ready', () => {
     console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK V14! 🟢");
 });
 
+// IL MOTORE DISCORD ATTIVABILE SOLO TRAMITE MENZIONE (TAG)
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot) return; // Ignora gli altri bot
+    
     const t = message.content.toLowerCase().trim();
     
-    if (t === 'gioca' || t === '!gioca') {
+    // Il bot si attiva SOLO se viene menzionato nel messaggio
+    if (message.mentions.users.has(client.user.id)) {
         stanza.bot.attivo = true;
         stanza.bot.vivo = true;
         stanza.bot.score = 0;
         stanza.bot.y = 250;
         stanza.bot.vy = 0;
-        message.reply(`Sto entrando nella Flappy Arena! Record da battere: ${stanza.recordAssoluto} 🏆`);
+        message.reply(`Ricevuto! Sto entrando nella Flappy Arena! Record attuale: ${stanza.recordAssoluto} 🏆`);
     }
 });
 
