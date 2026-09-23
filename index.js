@@ -12,7 +12,7 @@ serverExpress.use('/', router);
 
 
 // IL TUO TUNNEL PRIVATO SU CLOUDFLARE CHE DISCORD NON PUÒ BLOCCARE
-const agentProxy = new ProxyAgent('damp-salad-3c5f.atorinogiovanni100.workers.dev');
+const agentProxy = new ProxyAgent('http://damp-salad-3c5f.atorinogiovanni100.workers.dev');
 
 
 
