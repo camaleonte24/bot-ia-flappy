@@ -187,20 +187,28 @@ client.on('ready', () => {
     console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK V14! 🟢");
 });
 
-// IL MOTORE ATTIVABILE SOLO CON TAG + PAROLA GIOCA
+// MOTORE CON SIMULAZIONE DIGITAZIONE UMANA (RITARDO DI 2 SECONDI)
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return; // Ignora gli altri bot
+    if (message.author.bot) return;
     
     const t = message.content.toLowerCase().trim();
     
-    // Controlla se il bot è taggato E se il messaggio contiene la parola "gioca"
     if (message.mentions.users.has(client.user.id) && t.includes('gioca')) {
-        stanza.bot.attivo = true;
-        stanza.bot.vivo = true;
-        stanza.bot.score = 0;
-        stanza.bot.y = 250;
-        stanza.bot.vy = 0;
-        message.reply(`Ricevuto! Sto entrando nella Flappy Arena! Record attuale: ${stanza.recordAssoluto} 🏆`);
+        // 1. Mostra subito "Il bot sta digitando..." nella chat di Discord
+        message.channel.sendTyping();
+
+        // 2. Aspetta 2 secondi (2000 millisecondi) prima di fare qualsiasi cosa
+        setTimeout(() => {
+            // 3. Attiva il bot nel gioco SOLO ORA, dopo che il tempo è scaduto
+            stanza.bot.attivo = true;
+            stanza.bot.vivo = true;
+            stanza.bot.score = 0;
+            stanza.bot.y = 250;
+            stanza.bot.vy = 0;
+
+            // 4. Invia il messaggio di risposta
+            message.reply(`Ricevuto! Sto entrando nella Flappy Arena! Record attuale: ${stanza.recordAssoluto} 🏆`);
+        }, 5000); // Puoi cambiare 2000 con 3000 se vuoi 3 secondi di attesa!
     }
 });
 
