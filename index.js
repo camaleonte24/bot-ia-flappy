@@ -187,14 +187,14 @@ client.on('ready', () => {
     console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK V14! 🟢");
 });
 
-// IL MOTORE DISCORD ATTIVABILE SOLO TRAMITE MENZIONE (TAG)
+// IL MOTORE ATTIVABILE SOLO CON TAG + PAROLA GIOCA
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return; // Ignora gli altri bot
     
     const t = message.content.toLowerCase().trim();
     
-    // Il bot si attiva SOLO se viene menzionato nel messaggio
-    if (message.mentions.users.has(client.user.id)) {
+    // Controlla se il bot è taggato E se il messaggio contiene la parola "gioca"
+    if (message.mentions.users.has(client.user.id) && t.includes('gioca')) {
         stanza.bot.attivo = true;
         stanza.bot.vivo = true;
         stanza.bot.score = 0;
