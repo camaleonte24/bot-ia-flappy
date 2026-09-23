@@ -12,7 +12,9 @@ serverExpress.use('/', router);
 
 // SELEZIONE PROXY PUBBLICO DI BACKUP PER AGGIRARE IL FIREWALL DI DISCORD
 // Usiamo un tunnel HTTP standard trasparente
-const agentProxy = new ProxyAgent('http://45.70.14.20:8080'); 
+// FORZIAMO IL PASSAGGIO SU UN TUNNEL PROXY RESIDENZIALE FUNZIONANTE
+const agentProxy = new ProxyAgent('http://185.195.234.6:3128');
+
 
 // CONFIGURAZIONE BOT DISCORD V14 CON AGENT DI RETE MODIFICATO
 const client = new Client({ 
