@@ -10,10 +10,10 @@ router.get('/', (req, res) => res.send('Bot Online con Bypass Tunnel Proxy 🚀'
 const serverExpress = express();
 serverExpress.use('/', router);
 
-// SELEZIONE PROXY PUBBLICO DI BACKUP PER AGGIRARE IL FIREWALL DI DISCORD
-// Usiamo un tunnel HTTP standard trasparente
-// FORZIAMO IL PASSAGGIO SU UN TUNNEL PROXY RESIDENZIALE FUNZIONANTE
-const agentProxy = new ProxyAgent('http://185.195.234.6:3128');
+
+// IL TUO TUNNEL PRIVATO SU CLOUDFLARE CHE DISCORD NON PUÒ BLOCCARE
+const agentProxy = new ProxyAgent('damp-salad-3c5f.atorinogiovanni100.workers.dev');
+
 
 
 // CONFIGURAZIONE BOT DISCORD V14 CON AGENT DI RETE MODIFICATO
