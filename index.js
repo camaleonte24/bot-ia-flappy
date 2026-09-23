@@ -1,40 +1,50 @@
+require('dotenv').config();
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const express = require('express');
-const { InteractionType, InteractionResponseType, verifyKeyMiddleware } = require('discord-interactions');
 
+// INIZIALIZZAZIONE SERVER DI CONTROLLO PER RENDER
 const app = express();
+app.get('/', (req, res) => res.send('Flappy Arena Cloud Online! 🚀'));
 
-// LA TUA CHIAVE PUBBLICA HARDWARE PRESA DALLO SCHERMO
-const CHIAVE_PUBBLICA = '2c7779edaafb7ce531ece50025663ac7870c1ba7325d366218194a71104f76b2';
-
-app.get('/', (req, res) => res.send('Ponte Webhook Ufficiale Attivo! 🚀'));
-
-// IL MITICO FILTRO DI DISCORD CHE VERIFICA LE FIRME AUTOMATICAMENTE IN UN MILLISECONDO
-app.post('/webhook', verifyKeyMiddleware(CHIAVE_PUBBLICA), (req, res) => {
-    const { type, data } = req.body;
-
-    // 1. Gestione del PING iniziale di Discord (Il test che bloccava il salvataggio)
-    if (type === InteractionType.PING) {
-        console.log("-> Discord ha validato la firma con successo! 🤝");
-        return res.send({ type: InteractionResponseType.PONG });
-    }
-
-    // 2. Lettura del comando in chat
-    if (type === InteractionType.APPLICATION_COMMAND) {
-        if (data && data.name === 'gioca') {
-            console.log("Comando /gioca intercettato via Webhook!");
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: "Sto entrando... (Ponte Cloud Webhook Ufficiale!) 🟢"
-                }
-            });
-        }
-    }
-
-    res.status(200).end();
+// CONFIGURAZIONE BOT DISCORD V14 PER LETTURA CHAT STANDARED
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent, 
+        GatewayIntentBits.DirectMessages
+    ],
+    partials: [Partials.Channel, Partials.Message]
 });
 
+client.on('ready', () => {
+    console.log("-> DISCORD ACCESO E OPERATIVO SUL NETWORK! 🟢");
+});
+
+// IL MOTORE CHE LEGGE I MESSAGGI TRADIZIONALI SENZA SLASH (/)
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return; // Ignora gli altri bot
+    
+    const t = message.content.toLowerCase().trim();
+    
+    // Controlla se qualcuno scrive 'gioca', '!gioca' o menziona il bot
+    if (t === 'gioca' || t === '!gioca' || message.mentions.users.has(client.user.id)) {
+        console.log(`Comando di gioco ricevuto da ${message.author.tag}!`);
+        message.reply(`Sto entrando... (Ponte Cloud Attivo) 🟢`);
+    }
+});
+
+// AVVIO PORTA ED ESECUZIONE LOGIN
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Server Webhook Ufficiale in ascolto sulla porta ${PORT} 🚀`);
+    console.log(`Server Express attivo sulla porta ${PORT} 🚀`);
+    
+    if (process.env.DISCORD_TOKEN) {
+        console.log("Tentativo di connessione a Discord...");
+        client.login(process.env.DISCORD_TOKEN).catch((err) => {
+            console.log("❌ Errore login Discord:", err.message);
+        });
+    } else {
+        console.log("❌ Errore critico: Variabile DISCORD_TOKEN vuota!");
+    }
 });
