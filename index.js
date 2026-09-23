@@ -8,6 +8,36 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// 1. CONFIGURAZIONE E EVENTI DI DISCORD (DEVONO STARE IN CIMA)
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent, 
+        GatewayIntentBits.DirectMessages
+    ],
+    partials: [Partials.Channel, Partials.Message]
+});
+
+client.on('ready', () => {
+    console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢");
+});
+
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    const t = message.content.toLowerCase().trim();
+    
+    if (t === 'gioca' || t === '!gioca' || message.mentions.users.has(client.user.id)) {
+        stanza.bot.attivo = true;
+        stanza.bot.vivo = true;
+        stanza.bot.score = 0;
+        stanza.bot.y = 250;
+        stanza.bot.vy = 0;
+        message.reply(`Sto entrando...`);
+    }
+});
+
+// 2. STATO DEL GIOCO MULTIPLAYER
 const COLORI_DISPONIBILI = ["#ff5555", "#55ff55", "#5555ff", "#ffaa00", "#ff55ff", "#00ffff"];
 
 let stanza = {
@@ -83,6 +113,7 @@ wss.on('connection', (ws) => {
     ws.on('close', () => { delete stanza.giocatori[idGiocatore]; });
 });
 
+// 3. INTERFACCIA WEB TELEFONI
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -164,43 +195,16 @@ app.get('/', (req, res) => {
     `);
 });
 
-// MESSAGGI DISCORD ORA COMPLETAMENTE INDIPENDENTI
-const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages],
-    partials: [Partials.Channel, Partials.Message]
-});
-
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    const t = message.content.toLowerCase().trim();
-    
-    if (t === 'gioca' || t === '!gioca' || message.mentions.users.has(client.user.id)) {
-        stanza.bot.attivo = true;
-        stanza.bot.vivo = true;
-        stanza.bot.score = 0;
-        stanza.bot.y = 250;
-        stanza.bot.vy = 0;
-        message.reply(`Sto entrando...`);
-    }
-});
-
-// LOG DI SICUREZZA INIZIALE
-client.on('ready', () => {
-    console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK! 🟢");
-});
-
-// DISCOPPIA IL WEB SERVER DA DISCORD: APRIAMO SUBITO LA PORTA DI RENDER
+// 4. AVVIO DEL SERVER E LOGIN ASINCRONO
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
-    console.log(`Server visivo per smartphone sbloccato sulla porta ${PORT} 🚀`);
-    
-    // Eseguiamo il login di Discord in un thread parallelo slegato dal server web
+    console.log(`Server visivo attivo sulla porta ${PORT} 🚀`);
     if (process.env.DISCORD_TOKEN) {
         console.log("Inizializzazione bot...");
         setTimeout(() => {
             client.login(process.env.DISCORD_TOKEN).catch((err) => {
-                console.log("❌ Errore login Discord:", err.message);
+                console.log("❌ Errore login:", err.message);
             });
-        }, 500); // Ritardo di mezzo secondo per far respirare la porta 10000
+        }, 500);
     }
 });
