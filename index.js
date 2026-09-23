@@ -89,6 +89,7 @@ function gameLoop() {
         }
     }
 
+
     let datiDaInviare = JSON.stringify({ type: "update", data: stanza });
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) client.send(datiDaInviare);
