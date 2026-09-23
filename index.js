@@ -51,16 +51,41 @@ function gameLoop() {
         }
     });
 
-    // FISICA BOT IA
+    // FISICA E CERVELLO POTENZIATO DEL BOT IA
     if (stanza.bot.attivo && stanza.bot.vivo) {
-        stanza.bot.vy += GRAVITA; stanza.bot.y += stanza.bot.vy;
-        if (stanza.bot.y > 485 || stanza.bot.y < 15) stanza.bot.vivo = false;
-        if (stanza.tuboX < 165 && stanza.tuboX > 90) {
-            if (stanza.bot.y < (stanza.tuboBucoY - 65) || stanza.bot.y > (stanza.tuboBucoY + 65)) stanza.bot.vivo = false;
+        stanza.bot.vy += GRAVITA; 
+        stanza.bot.y += stanza.bot.vy;
+        
+        // Controllo collisioni soffitto/pavimento (Immunità sul primo tubo a punteggio 0)
+        if (stanza.bot.y > 485 || stanza.bot.y < 15) {
+            if (stanza.bot.score > 0) {
+                stanza.bot.vivo = false; 
+            } else {
+                stanza.bot.y = 250; 
+                stanza.bot.vy = SALTO;
+            }
         }
-        let distanzaDalBuco = stanza.bot.y - stanza.tuboBucoY;
-        if (stanza.tuboX < 280 && distanzaDalBuco > 12 && stanza.bot.vy > 0) {
-            if (Math.random() > 0.15) stanza.bot.vy = SALTO;
+        
+        // Controllo collisione con il tubo (Immunità sul primo tubo a punteggio 0)
+        if (stanza.tuboX < 165 && stanza.tuboX > 90) {
+            if (stanza.bot.y < (stanza.tuboBucoY - 65) || stanza.bot.y > (stanza.tuboBucoY + 65)) {
+                if (stanza.bot.score > 0) stanza.bot.vivo = false;
+            }
+        }
+        
+        // INTELLIGENZA ARTIFICIALE: Guarda avanti e reagisce solo se il tubo è vicino!
+        if (stanza.tuboX < 350) {
+            let obiettivoY = stanza.tuboBucoY; // Punta al centro del buco
+            
+            // Salta solo se scende sotto l'obiettivo e sta effettivamente cadendo
+            if (stanza.bot.y > (obiettivoY + 10) && stanza.bot.vy > 0) {
+                stanza.bot.vy = SALTO;
+            }
+        } else {
+            // Se il tubo è lontano, fluttua dolcemente attorno al centro dello schermo (y: 250) per stabilizzarsi
+            if (stanza.bot.y > 270 && stanza.bot.vy > 0) {
+                stanza.bot.vy = SALTO;
+            }
         }
     }
 
@@ -177,7 +202,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// DISCORD GATEWAY COUPLING
+// MESSAGGI DISCORD CON DIGITAZIONE A 5 SECONDI
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
     partials: [Partials.Channel, Partials.Message]
@@ -187,24 +212,19 @@ client.on('ready', () => {
     console.log("-> DISCORD ACCESO E REGISTRATO SUL NETWORK V14! 🟢");
 });
 
-// MOTORE CON SIMULAZIONE DIGITAZIONE UMANA (RITARDO DI 2 SECONDI)
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    
     const t = message.content.toLowerCase().trim();
     
     if (message.mentions.users.has(client.user.id) && t.includes('gioca')) {
-        // 1. Mostra subito "Il bot sta digitando..." nella chat di Discord
         message.channel.sendTyping();
 
-        // 2. Aspetta 2 secondi (2000 millisecondi) prima di fare qualsiasi cosa
         setTimeout(() => {
-            // 3. Attiva il bot nel gioco SOLO ORA, dopo che il tempo è scaduto
             stanza.bot.attivo = true;
             stanza.bot.vivo = true;
             stanza.bot.score = 0;
             stanza.bot.y = 250;
-            stanza.bot.vy = 0;
+            stanza.bot.vy = SALTO;
 
             // 4. Invia il messaggio di risposta
             message.reply(`Ricevuto! Sto entrando nella Flappy Arena! Record attuale: ${stanza.recordAssoluto} 🏆`);
