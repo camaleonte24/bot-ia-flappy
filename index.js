@@ -60,7 +60,7 @@ function inviaReportDiscord() {
     let messaggio = `🎮 **La sessione di gioco è terminata!** Ecco la classifica finale:\n`;
     cronologiaPartita.forEach((player, index) => {
         const medaglia = index === 0 ? "🏆 " : index === 1 ? "🥈 " : index === 2 ? "🥉 " : "✨ ";
-        messaggio += `${medaglia}**Giocatore ${player.numero}**: ${player.score} Punti ${player.isBot ? '(IA)' : ''}\n`;
+        messaggio += `${medaglia}**Giocatore ${player.numero}**: ${player.score} Punti ${player.isBot ? '(IO)' : ''}\n`;
     });
 
     if (client.channels.cache.size > 0) {
